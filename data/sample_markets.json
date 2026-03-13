@@ -1,0 +1,302 @@
+[
+  {
+    "market_id": "MKT-001",
+    "title": "Event market 1",
+    "category": "politics",
+    "open_ts": "2025-12-20T17:27:44.920615Z",
+    "close_ts": "2025-12-28T17:27:44.920615Z",
+    "resolve_ts": null,
+    "outcome": null,
+    "metadata": {
+      "source": "sample"
+    }
+  },
+  {
+    "market_id": "MKT-002",
+    "title": "Event market 2",
+    "category": "sports",
+    "open_ts": "2025-12-21T17:27:44.920615Z",
+    "close_ts": "2025-12-30T17:27:44.920615Z",
+    "resolve_ts": "2025-12-30T23:27:44.920615Z",
+    "outcome": "yes",
+    "metadata": {
+      "source": "sample"
+    }
+  },
+  {
+    "market_id": "MKT-003",
+    "title": "Event market 3",
+    "category": "macro",
+    "open_ts": "2025-12-22T17:27:44.920615Z",
+    "close_ts": "2026-01-01T17:27:44.920615Z",
+    "resolve_ts": null,
+    "outcome": null,
+    "metadata": {
+      "source": "sample"
+    }
+  },
+  {
+    "market_id": "MKT-004",
+    "title": "Event market 4",
+    "category": "macro",
+    "open_ts": "2025-12-23T17:27:44.920615Z",
+    "close_ts": "2026-01-03T17:27:44.920615Z",
+    "resolve_ts": "2026-01-03T23:27:44.920615Z",
+    "outcome": "yes",
+    "metadata": {
+      "source": "sample"
+    }
+  },
+  {
+    "market_id": "MKT-005",
+    "title": "Event market 5",
+    "category": "politics",
+    "open_ts": "2025-12-24T17:27:44.920615Z",
+    "close_ts": "2025-12-31T17:27:44.920615Z",
+    "resolve_ts": null,
+    "outcome": null,
+    "metadata": {
+      "source": "sample"
+    }
+  },
+  {
+    "market_id": "MKT-006",
+    "title": "Event market 6",
+    "category": "tech",
+    "open_ts": "2025-12-25T17:27:44.920615Z",
+    "close_ts": "2026-01-02T17:27:44.920615Z",
+    "resolve_ts": "2026-01-02T23:27:44.920615Z",
+    "outcome": "yes",
+    "metadata": {
+      "source": "sample"
+    }
+  },
+  {
+    "market_id": "MKT-007",
+    "title": "Event market 7",
+    "category": "politics",
+    "open_ts": "2025-12-26T17:27:44.920615Z",
+    "close_ts": "2026-01-04T17:27:44.920615Z",
+    "resolve_ts": null,
+    "outcome": null,
+    "metadata": {
+      "source": "sample"
+    }
+  },
+  {
+    "market_id": "MKT-008",
+    "title": "Event market 8",
+    "category": "politics",
+    "open_ts": "2025-12-27T17:27:44.920615Z",
+    "close_ts": "2026-01-06T17:27:44.920615Z",
+    "resolve_ts": "2026-01-06T23:27:44.920615Z",
+    "outcome": "yes",
+    "metadata": {
+      "source": "sample"
+    }
+  },
+  {
+    "market_id": "MKT-009",
+    "title": "Event market 9",
+    "category": "macro",
+    "open_ts": "2025-12-28T17:27:44.920615Z",
+    "close_ts": "2026-01-08T17:27:44.920615Z",
+    "resolve_ts": null,
+    "outcome": null,
+    "metadata": {
+      "source": "sample"
+    }
+  },
+  {
+    "market_id": "MKT-010",
+    "title": "Event market 10",
+    "category": "politics",
+    "open_ts": "2025-12-29T17:27:44.920615Z",
+    "close_ts": "2026-01-05T17:27:44.920615Z",
+    "resolve_ts": "2026-01-05T23:27:44.920615Z",
+    "outcome": "yes",
+    "metadata": {
+      "source": "sample"
+    }
+  },
+  {
+    "market_id": "MKT-011",
+    "title": "Event market 11",
+    "category": "macro",
+    "open_ts": "2025-12-30T17:27:44.920615Z",
+    "close_ts": "2026-01-07T17:27:44.920615Z",
+    "resolve_ts": null,
+    "outcome": null,
+    "metadata": {
+      "source": "sample"
+    }
+  },
+  {
+    "market_id": "MKT-012",
+    "title": "Event market 12",
+    "category": "macro",
+    "open_ts": "2025-12-31T17:27:44.920615Z",
+    "close_ts": "2026-01-09T17:27:44.920615Z",
+    "resolve_ts": "2026-01-09T23:27:44.920615Z",
+    "outcome": "no",
+    "metadata": {
+      "source": "sample"
+    }
+  },
+  {
+    "market_id": "MKT-013",
+    "title": "Event market 13",
+    "category": "tech",
+    "open_ts": "2026-01-01T17:27:44.920615Z",
+    "close_ts": "2026-01-11T17:27:44.920615Z",
+    "resolve_ts": null,
+    "outcome": null,
+    "metadata": {
+      "source": "sample"
+    }
+  },
+  {
+    "market_id": "MKT-014",
+    "title": "Event market 14",
+    "category": "politics",
+    "open_ts": "2026-01-02T17:27:44.920615Z",
+    "close_ts": "2026-01-13T17:27:44.920615Z",
+    "resolve_ts": "2026-01-13T23:27:44.920615Z",
+    "outcome": "no",
+    "metadata": {
+      "source": "sample"
+    }
+  },
+  {
+    "market_id": "MKT-015",
+    "title": "Event market 15",
+    "category": "macro",
+    "open_ts": "2026-01-03T17:27:44.920615Z",
+    "close_ts": "2026-01-10T17:27:44.920615Z",
+    "resolve_ts": null,
+    "outcome": null,
+    "metadata": {
+      "source": "sample"
+    }
+  },
+  {
+    "market_id": "MKT-016",
+    "title": "Event market 16",
+    "category": "sports",
+    "open_ts": "2026-01-04T17:27:44.920615Z",
+    "close_ts": "2026-01-12T17:27:44.920615Z",
+    "resolve_ts": "2026-01-12T23:27:44.920615Z",
+    "outcome": "no",
+    "metadata": {
+      "source": "sample"
+    }
+  },
+  {
+    "market_id": "MKT-017",
+    "title": "Event market 17",
+    "category": "sports",
+    "open_ts": "2026-01-05T17:27:44.920615Z",
+    "close_ts": "2026-01-14T17:27:44.920615Z",
+    "resolve_ts": null,
+    "outcome": null,
+    "metadata": {
+      "source": "sample"
+    }
+  },
+  {
+    "market_id": "MKT-018",
+    "title": "Event market 18",
+    "category": "macro",
+    "open_ts": "2026-01-06T17:27:44.920615Z",
+    "close_ts": "2026-01-16T17:27:44.920615Z",
+    "resolve_ts": "2026-01-16T23:27:44.920615Z",
+    "outcome": "yes",
+    "metadata": {
+      "source": "sample"
+    }
+  },
+  {
+    "market_id": "MKT-019",
+    "title": "Event market 19",
+    "category": "sports",
+    "open_ts": "2026-01-07T17:27:44.920615Z",
+    "close_ts": "2026-01-18T17:27:44.920615Z",
+    "resolve_ts": null,
+    "outcome": null,
+    "metadata": {
+      "source": "sample"
+    }
+  },
+  {
+    "market_id": "MKT-020",
+    "title": "Event market 20",
+    "category": "politics",
+    "open_ts": "2026-01-08T17:27:44.920615Z",
+    "close_ts": "2026-01-15T17:27:44.920615Z",
+    "resolve_ts": "2026-01-15T23:27:44.920615Z",
+    "outcome": "yes",
+    "metadata": {
+      "source": "sample"
+    }
+  },
+  {
+    "market_id": "MKT-021",
+    "title": "Event market 21",
+    "category": "tech",
+    "open_ts": "2026-01-09T17:27:44.920615Z",
+    "close_ts": "2026-01-17T17:27:44.920615Z",
+    "resolve_ts": null,
+    "outcome": null,
+    "metadata": {
+      "source": "sample"
+    }
+  },
+  {
+    "market_id": "MKT-022",
+    "title": "Event market 22",
+    "category": "sports",
+    "open_ts": "2026-01-10T17:27:44.920615Z",
+    "close_ts": "2026-01-19T17:27:44.920615Z",
+    "resolve_ts": "2026-01-19T23:27:44.920615Z",
+    "outcome": "yes",
+    "metadata": {
+      "source": "sample"
+    }
+  },
+  {
+    "market_id": "MKT-023",
+    "title": "Event market 23",
+    "category": "sports",
+    "open_ts": "2026-01-11T17:27:44.920615Z",
+    "close_ts": "2026-01-21T17:27:44.920615Z",
+    "resolve_ts": null,
+    "outcome": null,
+    "metadata": {
+      "source": "sample"
+    }
+  },
+  {
+    "market_id": "MKT-024",
+    "title": "Event market 24",
+    "category": "politics",
+    "open_ts": "2026-01-12T17:27:44.920615Z",
+    "close_ts": "2026-01-23T17:27:44.920615Z",
+    "resolve_ts": "2026-01-23T23:27:44.920615Z",
+    "outcome": "no",
+    "metadata": {
+      "source": "sample"
+    }
+  },
+  {
+    "market_id": "MKT-025",
+    "title": "Event market 25",
+    "category": "tech",
+    "open_ts": "2026-01-13T17:27:44.920615Z",
+    "close_ts": "2026-01-20T17:27:44.920615Z",
+    "resolve_ts": null,
+    "outcome": null,
+    "metadata": {
+      "source": "sample"
+    }
+  }
+]
