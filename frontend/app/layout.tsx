@@ -9,12 +9,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
-        <div className="container">
-          <div className="banner">
-            Anomaly detection for integrity research. Scores are not proof of wrongdoing.
-          </div>
-          {children}
-        </div>
+        <div className="container">{children}</div>
       </body>
     </html>
   );

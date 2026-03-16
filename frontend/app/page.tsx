@@ -49,27 +49,61 @@ type BacktestPayload = {
   };
 };
 
+function formatOdds(value: number | null): string {
+  if (value === null) {
+    return "-";
+  }
+  return value > 0 ? `+${value}` : `${value}`;
+}
+
+function formatPercent(value: number | null | undefined): string {
+  if (value === null || value === undefined) {
+    return "-";
+  }
+  return `${(value * 100).toFixed(2)}%`;
+}
+
+function formatCurrency(value: number | null | undefined): string {
+  if (value === null || value === undefined) {
+    return "-";
+  }
+  return `$${value.toFixed(2)}`;
+}
+
 export default function LeaderboardPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [backtest, setBacktest] = useState<BacktestPayload | null>(null);
-  const [window, setWindow] = useState<string>("30d");
+  const [windowValue, setWindowValue] = useState<string>("30d");
   const [minTrades, setMinTrades] = useState<number>(10);
   const [marketFilter, setMarketFilter] = useState<string>("all");
   const [kalshiEquivalentOnly, setKalshiEquivalentOnly] = useState<boolean>(false);
   const [bankrollUsd, setBankrollUsd] = useState<number>(500);
   const [error, setError] = useState<string>("");
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem("pmid-theme");
+    const nextTheme = stored === "dark" ? "dark" : "light";
+    setTheme(nextTheme);
+    document.documentElement.dataset.theme = nextTheme;
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    window.localStorage.setItem("pmid-theme", theme);
+  }, [theme]);
 
   useEffect(() => {
     const fetchRows = (): void => {
       const qs = new URLSearchParams({
-        window,
+        window: windowValue,
         min_trades: String(minTrades),
         sort: "score_desc",
         market_filter: marketFilter,
         kalshi_equivalent_only: String(kalshiEquivalentOnly),
         bankroll_usd: String(bankrollUsd),
+        platform: "kalshi",
       });
-      qs.set("platform", "kalshi");
       apiGet<Row[]>(`/api/entities?${qs.toString()}`)
         .then((data) => {
           setRows(data);
@@ -81,7 +115,7 @@ export default function LeaderboardPage() {
     fetchRows();
     const timer = setInterval(fetchRows, 5000);
     return () => clearInterval(timer);
-  }, [window, minTrades, marketFilter, kalshiEquivalentOnly, bankrollUsd]);
+  }, [windowValue, minTrades, marketFilter, kalshiEquivalentOnly, bankrollUsd]);
 
   useEffect(() => {
     apiGet<BacktestPayload>("/api/backtest/latest")
@@ -91,53 +125,104 @@ export default function LeaderboardPage() {
 
   return (
     <main>
-      <h1>Prediction Market Integrity Dashboard</h1>
-      <div className="card">
-        <h3>Backtest Metrics</h3>
+      <section className="hero">
+        <div>
+          <p className="eyebrow">Kalshi Flow Monitor</p>
+          <h1>Prediction Market Integrity Dashboard</h1>
+          <p className="lede">
+            Live market surveillance with backtest context, anomaly ranking, and stake sizing in one place.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="theme-toggle"
+          onClick={() => setTheme((curr) => (curr === "light" ? "dark" : "light"))}
+        >
+          {theme === "light" ? "Dark Mode" : "Light Mode"}
+        </button>
+      </section>
+
+      <section className="card metrics-card">
+        <div className="section-head">
+          <h3>Backtest Metrics</h3>
+          <span className="section-tag">latest model</span>
+        </div>
         {backtest?.metrics?.error ? (
-          <p style={{ color: "var(--muted)" }}>Backtest status: {backtest.metrics.error}</p>
+          <p className="error-copy">Backtest status: {backtest.metrics.error}</p>
         ) : (
           <div className="kv-grid">
             <div>
               <strong>ROI</strong>
-              <div>{backtest?.metrics?.strategy?.cumulative_roi !== undefined ? `${(backtest.metrics.strategy.cumulative_roi * 100).toFixed(2)}%` : "-"}</div>
+              <div>
+                {backtest?.metrics?.strategy?.cumulative_roi !== undefined
+                  ? `${(backtest.metrics.strategy.cumulative_roi * 100).toFixed(2)}%`
+                  : "-"}
+              </div>
             </div>
             <div>
               <strong>Sharpe</strong>
-              <div>{backtest?.metrics?.strategy?.sharpe_ratio !== undefined ? backtest.metrics.strategy.sharpe_ratio.toFixed(3) : "-"}</div>
+              <div>
+                {backtest?.metrics?.strategy?.sharpe_ratio !== undefined
+                  ? backtest.metrics.strategy.sharpe_ratio.toFixed(3)
+                  : "-"}
+              </div>
             </div>
             <div>
               <strong>Max Drawdown</strong>
-              <div>{backtest?.metrics?.strategy?.max_drawdown !== undefined ? `$${backtest.metrics.strategy.max_drawdown.toFixed(2)}` : "-"}</div>
+              <div>
+                {backtest?.metrics?.strategy?.max_drawdown !== undefined
+                  ? `$${backtest.metrics.strategy.max_drawdown.toFixed(2)}`
+                  : "-"}
+              </div>
             </div>
             <div>
               <strong>Sample Size</strong>
-              <div>{backtest?.metrics?.strategy?.sample_size_bets !== undefined ? `${Math.round(backtest.metrics.strategy.sample_size_bets)} bets` : "-"}</div>
+              <div>
+                {backtest?.metrics?.strategy?.sample_size_bets !== undefined
+                  ? `${Math.round(backtest.metrics.strategy.sample_size_bets)} bets`
+                  : "-"}
+              </div>
             </div>
             <div>
-              <strong>Out-of-sample validation</strong>
+              <strong>Out-of-sample</strong>
               <div>{backtest?.metrics?.out_of_sample_validation?.available ? "available" : "not available"}</div>
             </div>
             <div>
               <strong>Cross-validation</strong>
-              <div>{backtest?.metrics?.cross_validation?.available ? `${backtest.metrics.cross_validation.folds_used ?? 0} folds` : "not available"}</div>
+              <div>
+                {backtest?.metrics?.cross_validation?.available
+                  ? `${backtest.metrics.cross_validation.folds_used ?? 0} folds`
+                  : "not available"}
+              </div>
             </div>
             <div>
               <strong>CV Mean ROI</strong>
-              <div>{backtest?.metrics?.cross_validation?.mean_cumulative_roi !== undefined ? `${(backtest.metrics.cross_validation.mean_cumulative_roi * 100).toFixed(2)}%` : "-"}</div>
+              <div>
+                {backtest?.metrics?.cross_validation?.mean_cumulative_roi !== undefined
+                  ? `${(backtest.metrics.cross_validation.mean_cumulative_roi * 100).toFixed(2)}%`
+                  : "-"}
+              </div>
             </div>
             <div>
               <strong>CV Mean Sharpe</strong>
-              <div>{backtest?.metrics?.cross_validation?.mean_sharpe_ratio !== undefined ? backtest.metrics.cross_validation.mean_sharpe_ratio.toFixed(3) : "-"}</div>
+              <div>
+                {backtest?.metrics?.cross_validation?.mean_sharpe_ratio !== undefined
+                  ? backtest.metrics.cross_validation.mean_sharpe_ratio.toFixed(3)
+                  : "-"}
+              </div>
             </div>
           </div>
         )}
-      </div>
+      </section>
 
-      <div className="card">
-        <h3>Leaderboard</h3>
+      <section className="card">
+        <div className="section-head">
+          <h3>Leaderboard</h3>
+          <span className="section-tag">live refresh 5s</span>
+        </div>
+
         <div className="filters">
-          <select value={window} onChange={(e) => setWindow(e.target.value)}>
+          <select value={windowValue} onChange={(e) => setWindowValue(e.target.value)}>
             <option value="7d">7d</option>
             <option value="30d">30d</option>
             <option value="90d">90d</option>
@@ -147,6 +232,7 @@ export default function LeaderboardPage() {
             min={1}
             value={minTrades}
             onChange={(e) => setMinTrades(Number(e.target.value) || 1)}
+            placeholder="min trades"
           />
           <input
             type="number"
@@ -168,7 +254,9 @@ export default function LeaderboardPage() {
             <option value="only_equiv">kalshi equivalent only</option>
           </select>
         </div>
-        {error ? <p style={{ color: "var(--danger)" }}>{error}</p> : null}
+
+        {error ? <p className="error-copy">{error}</p> : null}
+
         <div className="table-wrap">
           <table>
             <thead>
@@ -187,38 +275,32 @@ export default function LeaderboardPage() {
               </tr>
             </thead>
             <tbody>
-              {rows.map((r, idx) => (
-                <tr key={`${r.platform}-${r.entity_id}-${idx}`}>
+              {rows.map((row, idx) => (
+                <tr key={`${row.platform}-${row.entity_id}-${idx}`}>
                   <td>
-                    <Link href={`/entity/${encodeURIComponent(r.entity_id)}?window=${window}`}>
-                      {r.entity_id}
+                    <Link href={`/entity/${encodeURIComponent(row.entity_id)}?window=${windowValue}`}>
+                      {row.entity_id}
                     </Link>
-                    <div>{r.platform}</div>
+                    <div className="entity-meta">{row.platform}</div>
                   </td>
-                  <td>{r.market}</td>
+                  <td className="market-copy">{row.market}</td>
+                  <td>{formatOdds(row.current_american_odds)}</td>
+                  <td>{formatOdds(row.kalshi_american_odds)}</td>
+                  <td>{formatPercent(row.quarter_kelly_fraction)}</td>
+                  <td>{formatCurrency(row.quarter_kelly_stake_usd)}</td>
                   <td>
-                    {r.current_american_odds === null
-                      ? "-"
-                      : r.current_american_odds > 0
-                        ? `+${r.current_american_odds}`
-                        : `${r.current_american_odds}`}
+                    <span className="score-pill">{row.anomaly_score_0_100.toFixed(1)}</span>
                   </td>
-                  <td>{r.kalshi_american_odds === null ? "-" : (r.kalshi_american_odds > 0 ? `+${r.kalshi_american_odds}` : `${r.kalshi_american_odds}`)}</td>
-                  <td>{r.quarter_kelly_fraction === null ? "-" : `${(r.quarter_kelly_fraction * 100).toFixed(2)}%`}</td>
-                  <td>{r.quarter_kelly_stake_usd === null ? "-" : `$${r.quarter_kelly_stake_usd.toFixed(2)}`}</td>
-                  <td>
-                    <span className="score-pill">{r.anomaly_score_0_100.toFixed(1)}</span>
-                  </td>
-                  <td>{r.top_explanations.slice(0, 3).join(" | ")}</td>
-                  <td>{r.num_trades}</td>
-                  <td>{r.total_notional_usd.toFixed(2)}</td>
-                  <td>{new Date(r.last_seen_ts).toLocaleString()}</td>
+                  <td className="reasons-copy">{row.top_explanations.slice(0, 3).join(" | ")}</td>
+                  <td>{row.num_trades}</td>
+                  <td>{row.total_notional_usd.toFixed(2)}</td>
+                  <td>{new Date(row.last_seen_ts).toLocaleString()}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      </div>
+      </section>
     </main>
   );
 }
