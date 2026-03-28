@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PM Integrity Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            zinc: {
+              925: '#18181b',
+              950: '#09090b',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    [x-cloak] { display: none !important; }
+    body { background: #09090b; color: #f4f4f5; font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', monospace; }
+    .tab-active { border-bottom: 2px solid #10b981; color: #10b981; }
+    .tab-inactive { border-bottom: 2px solid transparent; color: #71717a; }
+    .score-high  { background: #052e16; color: #4ade80; border: 1px solid #166534; }
+    .score-mid   { background: #1c1917; color: #fb923c; border: 1px solid #78350f; }
+    .score-low   { background: #18181b; color: #a1a1aa; border: 1px solid #3f3f46; }
+    .alert-new   { background: #1c1400; border-left: 3px solid #f59e0b; }
+    .alert-old   { background: #18181b; border-left: 3px solid #3f3f46; }
+    .tag-btn-on  { background: #065f46; color: #6ee7b7; border: 1px solid #059669; }
+    .tag-btn-off { background: #18181b; color: #52525b; border: 1px solid #3f3f46; }
+    .side-yes    { color: #4ade80; }
+    .side-no     { color: #f87171; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #18181b; }
+    ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
+    table { border-collapse: collapse; width: 100%; }
+    th { background: #18181b; color: #71717a; font-weight: 500; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; padding: 8px 10px; text-align: left; border-bottom: 1px solid #27272a; white-space: nowrap; }
+    td { padding: 7px 10px; border-bottom: 1px solid #1f1f21; font-size: 0.78rem; vertical-align: top; }
+    tr:hover td { background: #1a1a1d; }
+    .pill { display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 0.7rem; font-weight: 600; }
+  </style>
+</head>
+<body class="min-h-full" x-data="app()" x-init="init()" x-cloak>
+
+  <!-- Header -->
+  <header class="border-b border-zinc-800 px-5 py-3 flex items-center justify-between sticky top-0 z-10" style="background:#09090b;">
+    <div class="flex items-center gap-3">
+      <span class="text-emerald-400 font-bold text-sm tracking-widest uppercase">PM</span>
+      <span class="text-zinc-400 text-xs">Integrity Dashboard</span>
+    </div>
+    <nav class="flex gap-0">
+      <button
+        @click="tab = 'sharp'"
+        :class="tab === 'sharp' ? 'tab-active' : 'tab-inactive'"
+        class="px-5 py-3 text-xs font-medium transition-colors">
+        Sharp Trades
+      </button>
+      <button
+        @click="tab = 'wallets'"
+        :class="tab === 'wallets' ? 'tab-active' : 'tab-inactive'"
+        class="px-5 py-3 text-xs font-medium transition-colors">
+        Wallet Discovery
+        <span x-show="alerts.length > 0" class="ml-1 bg-amber-500 text-black text-xs px-1.5 py-0.5 rounded-full font-bold" x-text="alerts.length"></span>
+      </button>
+    </nav>
+    <div class="text-zinc-600 text-xs" x-text="lastRefresh"></div>
+  </header>
+
+  <!-- ===================== SHARP TRADES TAB ===================== -->
+  <div x-show="tab === 'sharp'" class="p-4 max-w-screen-2xl mx-auto">
+
+    <!-- Backtest metrics -->
+    <div class="rounded-lg border border-zinc-800 bg-zinc-900 p-4 mb-4">
+      <div class="flex items-center gap-3 mb-3">
+        <h2 class="text-xs font-semibold text-zinc-300 uppercase tracking-widest">Backtest Metrics</h2>
+        <span class="text-zinc-600 text-xs">latest model · in-sample</span>
+        <span class="ml-auto text-amber-500 text-xs" x-show="backtest && backtest.metrics && backtest.metrics.notes">⚠ in-sample — treat with caution</span>
+      </div>
+      <template x-if="backtest && backtest.metrics && backtest.metrics.strategy">
+        <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+          <template x-for="[k,v] in backtestKV()" :key="k">
+            <div class="bg-zinc-950 rounded p-2">
+              <div class="text-zinc-500 text-xs mb-1" x-text="k"></div>
+              <div class="text-zinc-200 text-sm font-semibold" x-text="v"></div>
+            </div>
+          </template>
+        </div>
+      </template>
+      <template x-if="!backtest || !backtest.metrics || !backtest.metrics.strategy">
+        <div class="text-zinc-600 text-xs">No backtest data. Run <code class="text-zinc-400">make backtest</code> to generate.</div>
+      </template>
+    </div>
+
+    <!-- Filters -->
+    <div class="flex flex-wrap items-center gap-2 mb-3">
+      <select x-model="sharpWindow" @change="fetchEntities()" class="bg-zinc-900 border border-zinc-700 text-zinc-300 text-xs rounded px-2 py-1.5">
+        <option value="7d">7d</option>
+        <option value="30d">30d</option>
+        <option value="90d">90d</option>
+      </select>
+      <input type="number" x-model.number="sharpMinTrades" @change="fetchEntities()" min="1" placeholder="min trades"
+        class="bg-zinc-900 border border-zinc-700 text-zinc-300 text-xs rounded px-2 py-1.5 w-24" />
+      <select x-model="sharpMarketFilter" @change="fetchEntities()" class="bg-zinc-900 border border-zinc-700 text-zinc-300 text-xs rounded px-2 py-1.5">
+        <option value="all">all markets</option>
+        <option value="sports">sports</option>
+        <option value="non_sports">non-sports</option>
+      </select>
+      <span class="ml-auto text-zinc-600 text-xs" x-text="entities.length + ' entities'"></span>
+      <span x-show="sharpLoading" class="text-emerald-500 text-xs">refreshing…</span>
+    </div>
+
+    <!-- Entity leaderboard -->
+    <div class="rounded-lg border border-zinc-800 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table>
+          <thead>
+            <tr>
+              <th>Entity</th>
+              <th>Market</th>
+              <th>Odds</th>
+              <th>Score</th>
+              <th>Reasons</th>
+              <th>Trades</th>
+              <th>Volume</th>
+              <th>Last Seen</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-if="entities.length === 0">
+              <tr><td colspan="8" class="text-center text-zinc-600 py-8">No data — run <code class="text-zinc-400">make pipeline</code> to ingest trades.</td></tr>
+            </template>
+            <template x-for="row in entities" :key="row.entity_id">
+              <tr>
+                <td>
+                  <span class="text-emerald-400 font-mono text-xs cursor-pointer hover:underline" @click="openEntityDetail(row)" x-text="fmtAddr(row.entity_id)"></span>
+                  <div class="text-zinc-600 text-xs" x-text="row.platform"></div>
+                </td>
+                <td class="text-zinc-400 text-xs max-w-xs truncate" x-text="row.market"></td>
+                <td class="text-zinc-300 font-mono" x-text="fmtOdds(row.current_american_odds)"></td>
+                <td>
+                  <span class="pill" :class="row.anomaly_score_0_100 >= 70 ? 'score-high' : row.anomaly_score_0_100 >= 40 ? 'score-mid' : 'score-low'" x-text="row.anomaly_score_0_100.toFixed(1)"></span>
+                </td>
+                <td class="text-zinc-500 text-xs max-w-sm" x-text="row.top_explanations.slice(0,2).join(' | ')"></td>
+                <td class="text-zinc-300" x-text="row.num_trades"></td>
+                <td class="text-zinc-300" x-text="fmtUsd(row.total_notional_usd)"></td>
+                <td class="text-zinc-500 text-xs" x-text="fmtTs(row.last_seen_ts)"></td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Entity detail modal -->
+    <div x-show="entityDetail" @click.self="entityDetail = null" class="fixed inset-0 bg-black/70 z-50 flex items-start justify-center p-4 pt-16 overflow-y-auto">
+      <div class="bg-zinc-900 border border-zinc-700 rounded-xl w-full max-w-3xl p-5" @click.stop>
+        <div class="flex items-start justify-between mb-4">
+          <div>
+            <div class="text-emerald-400 font-mono text-sm" x-text="entityDetail && entityDetail.entity_id"></div>
+            <div class="text-zinc-500 text-xs mt-1" x-text="entityDetail && entityDetail.platform + ' · ' + entityDetail.window"></div>
+          </div>
+          <button @click="entityDetail = null" class="text-zinc-500 hover:text-zinc-300 text-xl leading-none">&times;</button>
+        </div>
+        <template x-if="entityDetail">
+          <div>
+            <div class="flex items-center gap-3 mb-4">
+              <span class="pill text-base" :class="entityDetail.anomaly_score_0_100 >= 70 ? 'score-high' : entityDetail.anomaly_score_0_100 >= 40 ? 'score-mid' : 'score-low'" x-text="entityDetail.anomaly_score_0_100.toFixed(1) + ' anomaly'"></span>
+            </div>
+            <div class="mb-3">
+              <div class="text-zinc-500 text-xs uppercase tracking-widest mb-1">Top Signals</div>
+              <template x-for="r in entityDetail.top_explanations.slice(0,5)" :key="r">
+                <div class="text-zinc-300 text-xs mb-1">• <span x-text="r"></span></div>
+              </template>
+            </div>
+            <div class="mb-3">
+              <div class="text-zinc-500 text-xs uppercase tracking-widest mb-1">Recent Trades</div>
+              <div class="overflow-x-auto rounded border border-zinc-800">
+                <table>
+                  <thead><tr><th>Market</th><th>Side</th><th>Price</th><th>Qty</th><th>Notional</th><th>Time</th></tr></thead>
+                  <tbody>
+                    <template x-for="t in (entityDetail.recent_trades || []).slice(0,15)" :key="t.trade_id">
+                      <tr>
+                        <td class="text-zinc-500 text-xs truncate max-w-xs" x-text="t.market_id"></td>
+                        <td :class="t.side === 'yes' ? 'side-yes' : 'side-no'" x-text="t.side.toUpperCase()"></td>
+                        <td class="text-zinc-300" x-text="(t.price * 100).toFixed(1) + '¢'"></td>
+                        <td class="text-zinc-400" x-text="t.quantity"></td>
+                        <td class="text-zinc-300" x-text="fmtUsd(t.notional_usd)"></td>
+                        <td class="text-zinc-500 text-xs" x-text="fmtTs(t.ts)"></td>
+                      </tr>
+                    </template>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </template>
+        <template x-if="!entityDetail">
+          <div class="text-zinc-600 text-xs text-center py-8">Loading…</div>
+        </template>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== WALLET DISCOVERY TAB ===================== -->
+  <div x-show="tab === 'wallets'" class="p-4 max-w-screen-2xl mx-auto">
+
+    <!-- Alert Feed -->
+    <div class="rounded-lg border border-amber-900/40 bg-zinc-900 mb-4 overflow-hidden">
+      <div class="flex items-center gap-3 px-4 py-2 border-b border-amber-900/40 bg-amber-950/20">
+        <span class="text-amber-400 text-xs font-semibold uppercase tracking-widest">Live Alert Feed</span>
+        <span class="text-zinc-500 text-xs">bets from tagged wallets · auto-refresh 5s</span>
+        <span class="ml-auto text-zinc-600 text-xs" x-text="alerts.length === 0 ? 'no tagged wallets yet' : alerts.length + ' alerts'"></span>
+      </div>
+      <div class="max-h-52 overflow-y-auto">
+        <template x-if="alerts.length === 0">
+          <div class="text-zinc-600 text-xs text-center py-6">Tag wallets below to see their live bets here.</div>
+        </template>
+        <template x-for="(a, i) in alerts" :key="a.address + a.ts">
+          <div class="flex items-start gap-3 px-4 py-2.5 border-b border-zinc-800/50" :class="i < 3 ? 'alert-new' : 'alert-old'">
+            <span class="text-xs font-mono text-emerald-400 shrink-0" x-text="fmtAddr(a.address)"></span>
+            <span :class="a.side === 'yes' || a.side === 'buy' ? 'side-yes' : 'side-no'" class="text-xs font-bold shrink-0" x-text="(a.side || '').toUpperCase()"></span>
+            <span class="text-zinc-300 text-xs grow truncate" x-text="a.market_title || a.market_id"></span>
+            <span class="text-zinc-400 text-xs shrink-0 font-mono" x-text="(a.price * 100).toFixed(1) + '¢'"></span>
+            <span class="text-amber-400 text-xs shrink-0 font-mono" x-text="fmtUsd(a.notional_usd)"></span>
+            <span class="text-zinc-600 text-xs shrink-0" x-text="fmtAgo(a.ts)"></span>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- Active Markets strip -->
+    <div class="rounded-lg border border-zinc-800 bg-zinc-900 mb-4 overflow-hidden">
+      <div class="flex items-center gap-3 px-4 py-2 border-b border-zinc-800">
+        <span class="text-zinc-400 text-xs font-semibold uppercase tracking-widest">Hot Markets</span>
+        <span class="text-zinc-600 text-xs">by 24h volume</span>
+      </div>
+      <div class="flex gap-2 overflow-x-auto px-4 py-2.5 no-scrollbar">
+        <template x-if="markets.length === 0">
+          <div class="text-zinc-600 text-xs py-1">Loading…</div>
+        </template>
+        <template x-for="m in markets.slice(0, 15)" :key="m.market_id">
+          <div class="shrink-0 bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 w-48 hover:border-zinc-600 transition-colors">
+            <div class="text-zinc-300 text-xs leading-tight truncate mb-1.5" x-text="m.title"></div>
+            <div class="flex items-center justify-between">
+              <span class="text-emerald-400 text-xs font-mono" x-text="m.yes_price ? (m.yes_price * 100).toFixed(0) + '¢' : '—'"></span>
+              <span class="text-zinc-500 text-xs" x-text="fmtUsd(m.volume_24h) + '/24h'"></span>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- Wallet Leaderboard + Detail -->
+    <div class="grid grid-cols-1 xl:grid-cols-5 gap-4">
+
+      <!-- Leaderboard -->
+      <div class="xl:col-span-3 rounded-lg border border-zinc-800 overflow-hidden">
+        <div class="flex flex-wrap items-center gap-2 px-4 py-2.5 border-b border-zinc-800 bg-zinc-900">
+          <span class="text-zinc-300 text-xs font-semibold uppercase tracking-widest">Top Wallets</span>
+          <span class="text-zinc-600 text-xs">Polymarket · public data</span>
+          <div class="ml-auto flex gap-1">
+            <template x-for="s in ['volume','profit','roi','win_rate']" :key="s">
+              <button
+                @click="walletSort = s"
+                :class="walletSort === s ? 'bg-emerald-900/50 text-emerald-400 border-emerald-700' : 'bg-zinc-900 text-zinc-500 border-zinc-700'"
+                class="px-2 py-0.5 text-xs rounded border transition-colors capitalize"
+                x-text="s.replace('_',' ')">
+              </button>
+            </template>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table>
+            <thead>
+              <tr>
+                <th class="w-8"></th>
+                <th>Wallet</th>
+                <th>P&amp;L</th>
+                <th>ROI</th>
+                <th>Win %</th>
+                <th>Volume</th>
+                <th>Trades</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-if="wallets.length === 0 && !walletsLoading">
+                <tr><td colspan="7" class="text-center text-zinc-600 py-8 text-xs">Loading wallets from Polymarket…</td></tr>
+              </template>
+              <template x-if="walletsLoading">
+                <tr><td colspan="7" class="text-center text-zinc-600 py-8 text-xs">Fetching from Polymarket API…</td></tr>
+              </template>
+              <template x-for="w in sortedWallets" :key="w.address">
+                <tr :class="selectedWallet === w.address ? 'bg-zinc-800' : ''" class="cursor-pointer" @click="selectWallet(w.address)">
+                  <td class="text-center">
+                    <button
+                      @click.stop="toggleTag(w.address)"
+                      :class="w.tagged ? 'tag-btn-on' : 'tag-btn-off'"
+                      class="rounded px-1.5 py-0.5 text-xs transition-colors"
+                      :title="w.tagged ? 'Unfollow' : 'Follow'">
+                      <span x-text="w.tagged ? '★' : '☆'"></span>
+                    </button>
+                  </td>
+                  <td>
+                    <span class="font-mono text-xs text-zinc-300" x-text="fmtAddr(w.address)"></span>
+                    <span x-show="w.tagged" class="ml-1 text-amber-400 text-xs">●</span>
+                  </td>
+                  <td :class="(w.profit_loss || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'" class="font-mono text-xs" x-text="fmtUsd(w.profit_loss)"></td>
+                  <td :class="(w.roi || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'" class="font-mono text-xs" x-text="fmtPct(w.roi)"></td>
+                  <td class="text-zinc-300 text-xs" x-text="w.win_rate ? (w.win_rate * 100).toFixed(1) + '%' : '—'"></td>
+                  <td class="text-zinc-400 text-xs font-mono" x-text="fmtUsd(w.volume)"></td>
+                  <td class="text-zinc-400 text-xs" x-text="w.num_trades || '—'"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Wallet Detail Panel -->
+      <div class="xl:col-span-2">
+        <template x-if="!selectedWallet">
+          <div class="rounded-lg border border-zinc-800 bg-zinc-900 p-6 text-center h-48 flex items-center justify-center">
+            <div class="text-zinc-600 text-xs">Click a wallet to view positions &amp; trade history</div>
+          </div>
+        </template>
+        <template x-if="selectedWallet">
+          <div class="rounded-lg border border-zinc-800 bg-zinc-900 overflow-hidden">
+            <!-- Detail header -->
+            <div class="px-4 py-3 border-b border-zinc-800 flex items-center gap-2">
+              <span class="font-mono text-xs text-emerald-400" x-text="fmtAddr(selectedWallet)"></span>
+              <button
+                @click.stop="toggleTag(selectedWallet)"
+                :class="walletDetail && walletDetail.tagged ? 'tag-btn-on' : 'tag-btn-off'"
+                class="rounded px-2 py-0.5 text-xs ml-auto transition-colors">
+                <span x-text="walletDetail && walletDetail.tagged ? '★ Following' : '☆ Follow'"></span>
+              </button>
+              <button @click="selectedWallet = null; walletDetail = null" class="text-zinc-500 hover:text-zinc-300 text-lg leading-none">&times;</button>
+            </div>
+
+            <!-- Loading state -->
+            <template x-if="!walletDetail">
+              <div class="px-4 py-8 text-center text-zinc-600 text-xs">Loading wallet data…</div>
+            </template>
+
+            <template x-if="walletDetail">
+              <div>
+                <!-- Stats row -->
+                <div class="grid grid-cols-3 divide-x divide-zinc-800 border-b border-zinc-800">
+                  <div class="px-3 py-2.5 text-center">
+                    <div class="text-zinc-500 text-xs mb-0.5">P&amp;L</div>
+                    <div :class="walletDetail.profit_loss >= 0 ? 'text-emerald-400' : 'text-red-400'" class="font-mono text-sm font-semibold" x-text="fmtUsd(walletDetail.profit_loss)"></div>
+                  </div>
+                  <div class="px-3 py-2.5 text-center">
+                    <div class="text-zinc-500 text-xs mb-0.5">ROI</div>
+                    <div :class="walletDetail.roi >= 0 ? 'text-emerald-400' : 'text-red-400'" class="font-mono text-sm font-semibold" x-text="fmtPct(walletDetail.roi)"></div>
+                  </div>
+                  <div class="px-3 py-2.5 text-center">
+                    <div class="text-zinc-500 text-xs mb-0.5">Win Rate</div>
+                    <div class="text-zinc-300 font-mono text-sm font-semibold" x-text="walletDetail.win_rate ? (walletDetail.win_rate * 100).toFixed(1) + '%' : '—'"></div>
+                  </div>
+                </div>
+
+                <!-- Sub-tabs -->
+                <div class="flex border-b border-zinc-800">
+                  <button @click="detailTab = 'positions'" :class="detailTab === 'positions' ? 'border-b-2 border-emerald-500 text-emerald-400' : 'text-zinc-500 border-b-2 border-transparent'" class="px-4 py-2 text-xs transition-colors">
+                    Positions <span x-show="walletDetail.positions && walletDetail.positions.length" class="ml-1 text-zinc-600" x-text="'(' + (walletDetail.positions || []).length + ')'"></span>
+                  </button>
+                  <button @click="detailTab = 'trades'" :class="detailTab === 'trades' ? 'border-b-2 border-emerald-500 text-emerald-400' : 'text-zinc-500 border-b-2 border-transparent'" class="px-4 py-2 text-xs transition-colors">
+                    Trades <span x-show="walletDetail.recent_trades && walletDetail.recent_trades.length" class="ml-1 text-zinc-600" x-text="'(' + (walletDetail.recent_trades || []).length + ')'"></span>
+                  </button>
+                </div>
+
+                <!-- Positions tab -->
+                <div x-show="detailTab === 'positions'" class="max-h-80 overflow-y-auto">
+                  <template x-if="!walletDetail.positions || walletDetail.positions.length === 0">
+                    <div class="text-zinc-600 text-xs text-center py-6">No open positions found.</div>
+                  </template>
+                  <template x-for="p in (walletDetail.positions || [])" :key="p.market_id + p.outcome">
+                    <div class="px-4 py-2.5 border-b border-zinc-800/50">
+                      <div class="text-zinc-300 text-xs truncate mb-1" x-text="p.market_title || p.market_id"></div>
+                      <div class="flex items-center gap-3 text-xs">
+                        <span :class="p.outcome && p.outcome.toLowerCase() === 'yes' ? 'side-yes' : 'side-no'" x-text="p.outcome || 'YES'"></span>
+                        <span class="text-zinc-400" x-text="p.size + ' shares'"></span>
+                        <span class="text-zinc-500">@<span class="font-mono" x-text="(p.avg_price * 100).toFixed(1) + '¢'"></span></span>
+                        <span :class="(p.pnl || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'" class="ml-auto font-mono" x-text="fmtUsd(p.pnl)"></span>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+
+                <!-- Trades tab -->
+                <div x-show="detailTab === 'trades'" class="max-h-80 overflow-y-auto">
+                  <template x-if="!walletDetail.recent_trades || walletDetail.recent_trades.length === 0">
+                    <div class="text-zinc-600 text-xs text-center py-6">No recent trades found.</div>
+                  </template>
+                  <template x-for="t in (walletDetail.recent_trades || [])" :key="t.market_id + t.ts">
+                    <div class="px-4 py-2 border-b border-zinc-800/50">
+                      <div class="text-zinc-400 text-xs truncate mb-0.5" x-text="t.market_title || t.market_id"></div>
+                      <div class="flex items-center gap-2 text-xs">
+                        <span :class="t.side === 'yes' || t.side === 'buy' ? 'side-yes' : 'side-no'" class="font-bold" x-text="(t.side || '').toUpperCase()"></span>
+                        <span class="text-zinc-500 font-mono" x-text="(t.price * 100).toFixed(1) + '¢'"></span>
+                        <span class="text-zinc-400 font-mono" x-text="fmtUsd(t.notional_usd)"></span>
+                        <span class="ml-auto text-zinc-600" x-text="fmtAgo(t.ts)"></span>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </template>
+          </div>
+        </template>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function app() {
+      return {
+        tab: 'sharp',
+
+        // Sharp Trades state
+        entities: [],
+        backtest: null,
+        sharpWindow: '30d',
+        sharpMinTrades: 10,
+        sharpMarketFilter: 'all',
+        sharpLoading: false,
+        entityDetail: null,
+
+        // Wallet Discovery state
+        alerts: [],
+        wallets: [],
+        markets: [],
+        walletSort: 'volume',
+        selectedWallet: null,
+        walletDetail: null,
+        detailTab: 'positions',
+        walletsLoading: false,
+
+        lastRefresh: '',
+        _timers: [],
+
+        init() {
+          this.fetchEntities();
+          this.fetchBacktest();
+          this.fetchAlerts();
+          this.fetchWallets();
+          this.fetchMarkets();
+
+          this._timers.push(setInterval(() => {
+            if (this.tab === 'sharp') this.fetchEntities();
+          }, 5000));
+
+          this._timers.push(setInterval(() => {
+            if (this.tab === 'wallets') {
+              this.fetchAlerts();
+            }
+          }, 5000));
+
+          this._timers.push(setInterval(() => {
+            if (this.tab === 'wallets') {
+              this.fetchWallets();
+              this.fetchMarkets();
+            }
+          }, 30000));
+        },
+
+        async fetchEntities() {
+          this.sharpLoading = true;
+          const qs = new URLSearchParams({
+            window: this.sharpWindow,
+            min_trades: this.sharpMinTrades,
+            sort: 'score_desc',
+            market_filter: this.sharpMarketFilter,
+            platform: 'polymarket',
+          });
+          const data = await fetch(`/api/entities?${qs}`).then(r => r.json()).catch(() => []);
+          this.entities = Array.isArray(data) ? data : [];
+          this.sharpLoading = false;
+          this.lastRefresh = new Date().toLocaleTimeString();
+        },
+
+        async fetchBacktest() {
+          this.backtest = await fetch('/api/backtest/latest').then(r => r.json()).catch(() => null);
+        },
+
+        async fetchAlerts() {
+          const data = await fetch('/api/alerts?limit=50').then(r => r.json()).catch(() => []);
+          this.alerts = Array.isArray(data) ? data : [];
+        },
+
+        async fetchWallets() {
+          this.walletsLoading = true;
+          const data = await fetch('/api/wallets/leaderboard?limit=50').then(r => r.json()).catch(() => []);
+          this.wallets = Array.isArray(data) ? data : [];
+          this.walletsLoading = false;
+        },
+
+        async fetchMarkets() {
+          const data = await fetch('/api/markets/active?limit=15').then(r => r.json()).catch(() => []);
+          this.markets = Array.isArray(data) ? data : [];
+        },
+
+        async toggleTag(address) {
+          const w = this.wallets.find(x => x.address === address);
+          const isTagged = w ? w.tagged : (this.walletDetail && this.walletDetail.tagged);
+          if (isTagged) {
+            await fetch(`/api/wallets/${address}/tag`, { method: 'DELETE' });
+          } else {
+            await fetch(`/api/wallets/${address}/tag`, { method: 'POST' });
+          }
+          // Update wallets list
+          this.wallets = this.wallets.map(x =>
+            x.address === address ? { ...x, tagged: !isTagged } : x
+          );
+          // Update detail panel
+          if (this.walletDetail && this.walletDetail.address === address) {
+            this.walletDetail = { ...this.walletDetail, tagged: !isTagged };
+          }
+        },
+
+        async selectWallet(address) {
+          this.selectedWallet = address;
+          this.walletDetail = null;
+          this.detailTab = 'positions';
+          const data = await fetch(`/api/wallets/${address}`).then(r => r.json()).catch(() => null);
+          this.walletDetail = data;
+        },
+
+        async openEntityDetail(row) {
+          this.entityDetail = {};
+          const data = await fetch(`/api/entities/${encodeURIComponent(row.entity_id)}?window=${this.sharpWindow}&platform=${row.platform}`)
+            .then(r => r.json()).catch(() => null);
+          this.entityDetail = data;
+        },
+
+        get sortedWallets() {
+          return [...this.wallets].sort((a, b) => {
+            switch (this.walletSort) {
+              case 'profit':   return (b.profit_loss || 0) - (a.profit_loss || 0);
+              case 'roi':      return (b.roi || 0) - (a.roi || 0);
+              case 'win_rate': return (b.win_rate || 0) - (a.win_rate || 0);
+              default:         return (b.volume || 0) - (a.volume || 0);
+            }
+          });
+        },
+
+        backtestKV() {
+          if (!this.backtest || !this.backtest.metrics) return [];
+          const s = this.backtest.metrics.strategy || {};
+          const cv = this.backtest.metrics.cross_validation || {};
+          return [
+            ['ROI', s.cumulative_roi != null ? (s.cumulative_roi * 100).toFixed(1) + '%' : '—'],
+            ['Sharpe', s.sharpe_ratio != null ? s.sharpe_ratio.toFixed(2) : '—'],
+            ['Hit Rate', s.hit_rate != null ? (s.hit_rate * 100).toFixed(1) + '%' : '—'],
+            ['Max DD', s.max_drawdown != null ? this.fmtUsd(s.max_drawdown) : '—'],
+            ['Sample', s.sample_size_bets != null ? Math.round(s.sample_size_bets) + ' bets' : '—'],
+            ['CV ROI', cv.mean_cumulative_roi != null ? (cv.mean_cumulative_roi * 100).toFixed(1) + '%' : '—'],
+            ['CV Sharpe', cv.mean_sharpe_ratio != null ? cv.mean_sharpe_ratio.toFixed(2) : '—'],
+            ['CV Folds', cv.folds_used != null ? cv.folds_used + ' folds' : '—'],
+          ];
+        },
+
+        // Formatters
+        fmtAddr(addr) {
+          if (!addr) return '';
+          if (addr.length <= 12) return addr;
+          return addr.slice(0, 6) + '…' + addr.slice(-4);
+        },
+
+        fmtOdds(v) {
+          if (v == null) return '—';
+          return v > 0 ? '+' + v : '' + v;
+        },
+
+        fmtUsd(v) {
+          if (v == null || v === '') return '—';
+          const n = Number(v);
+          if (isNaN(n)) return '—';
+          const sign = n < 0 ? '-' : '';
+          const abs = Math.abs(n);
+          if (abs >= 1e6) return sign + '$' + (abs / 1e6).toFixed(2) + 'M';
+          if (abs >= 1e3) return sign + '$' + (abs / 1e3).toFixed(1) + 'k';
+          return sign + '$' + abs.toFixed(0);
+        },
+
+        fmtPct(v) {
+          if (v == null) return '—';
+          return (Number(v) * 100).toFixed(1) + '%';
+        },
+
+        fmtTs(ts) {
+          if (!ts) return '';
+          try { return new Date(ts).toLocaleString([], { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }); }
+          catch { return ts; }
+        },
+
+        fmtAgo(ts) {
+          if (!ts) return '';
+          try {
+            const diff = Date.now() - new Date(ts).getTime();
+            const s = Math.floor(diff / 1000);
+            if (s < 60) return s + 's ago';
+            if (s < 3600) return Math.floor(s / 60) + 'm ago';
+            if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+            return Math.floor(s / 86400) + 'd ago';
+          } catch { return ''; }
+        },
+      };
+    }
+  </script>
+</body>
+</html>
